@@ -1,0 +1,358 @@
+PARSER_BEGIN(Parser)
+package parser;
+
+import ast.*;
+import type.*;
+import util.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Parser {}
+
+PARSER_END(Parser)
+
+<*>SKIP:
+{
+    " "
+    |
+    "\t"
+    |
+    "\r"
+    |
+    "\n"
+    |
+    "\f"
+}
+
+TOKEN:
+{
+    < INT : "int" >
+    |
+    < BOOL : "bool" >
+    |
+    < REF : "ref" >
+    |
+    < TRUE : "true" >
+    |
+    < FALSE : "false" >
+    |
+    < DEREF : "!" >
+    |
+    < SEMICOL : ";" >
+    |
+    < COL : ":" >
+    |
+    < FUNCTION : "fun" >
+    |
+    < ARROW : "->" >
+    |
+    < THEN : "then" >
+    |
+    < DO : "do" >
+    |
+    < IF : "if" >
+    |
+    < ELSE : "else" >
+    |
+    < WHILE : "while" >
+    |
+    < NEW : "new">
+    |
+    < GT  : ">" >
+    |
+    < GTE : ">=" >
+    |
+    < LT : "<" >
+    |
+    < LTE : "<=" >
+    |
+    < DECL : "let" >
+    |
+    < ASSIGN : ":=" >
+    |
+    < DEF : "=" >
+    |
+    < EQ : "==" >
+    |
+    < NOTEQ : "!=" >
+    |
+    < OR : "||" >
+    |
+    < AND : "&&" >
+    |
+    < NOT : "~" >
+    |
+    < COMMA : "," >
+    |
+    < IN : "in" >
+    |
+    < END : "end" >
+    |
+    < PLUS : "+" >
+    |
+    < MINUS : "-">
+    |
+    < TIMES : "*">
+    |
+    < DIV : "/">
+    |
+    < LPAR : "(" >
+    |
+    < RPAR : ")" >
+    |
+    < NUM : (["0"-"9"]) + >
+    |
+    < ID : ["a"-"z","A"-"Z"] (["a"-"z","A"-"Z","0"-"9"]) * >
+    |
+    < EOL : ";;" >
+}
+
+ASTNode Start():
+{
+    ASTNode root;
+}
+{
+    root = SequenceExpression() <EOL>
+    { return root; }
+}
+
+ASTNode SequenceExpression():
+{
+    ASTNode expression1;
+    ASTNode expression2;
+
+    List<ASTNode> expressions = new ArrayList<ASTNode>();
+}
+{
+	expression1 = AssignExpression()
+	{ expressions.add(expression1); }
+	(
+	    <SEMICOL> expression2 = AssignExpression()
+	    {
+	        expressions.add(expression2);
+	        expression1 = new ASTSequence(expressions);
+	    }
+	) *
+	{ return expression1;  }
+}
+
+ASTNode AssignExpression():
+{
+    ASTNode expression1;
+    ASTNode expression2;
+}
+{
+    expression1 = DisjunctionExpression()
+    (
+        <ASSIGN> expression2 = DisjunctionExpression()
+        { expression1 = new ASTAssign(expression1, expression2); }
+    ) ?
+    { return expression1; }
+}
+
+ASTNode DisjunctionExpression():
+{
+    ASTNode expression1;
+    ASTNode expression2;
+}
+{
+	expression1 = ConjunctionExpression()
+	(
+	    <OR> expression2 = ConjunctionExpression()
+	    { expression1 = new ASTDisjunction(expression1, expression2); }
+	) ?
+	{ return expression1; }
+}
+
+ASTNode ConjunctionExpression():
+{
+    ASTNode expression1;
+    ASTNode expression2;
+}
+{
+	expression1 = EqualityExpression()
+	(
+        <AND> expression2 = EqualityExpression()
+        { expression1 = new ASTConjunction(expression1, expression2); }
+    ) ?
+	{ return expression1; }
+}
+
+ASTNode EqualityExpression():
+{
+    ASTNode expression1;
+    ASTNode expression2;
+}
+{
+    expression1 = CompareExpression()
+    (
+        <EQ> expression2 = CompareExpression()
+        { expression1 = new ASTEqual(expression1, expression2); }
+        |
+        <NOTEQ> expression2 = CompareExpression()
+        { expression1 = new ASTNotEqual(expression1, expression2); }
+    ) ?
+    { return expression1; }
+}
+
+ASTNode CompareExpression():
+{
+    ASTNode expression1;
+    ASTNode expression2;
+}
+{
+    expression1 = Expression()
+    (
+        <LT> expression2 = Expression()
+        { expression1 = new ASTLesser(expression1, expression2); }
+        |
+        <GT> expression2 = Expression()
+        { expression1 = new ASTGreater(expression1, expression2); }
+        |
+        <LTE> expression2 = Expression()
+        { expression1 = new ASTLesserEqual(expression1, expression2); }
+        |
+        <GTE> expression2 = Expression()
+        { expression1 = new ASTGreaterEqual(expression1, expression2); }
+    ) ?
+    { return expression1; }
+}
+
+ASTNode Expression():
+{
+    ASTNode expression1;
+    ASTNode expression2;
+}
+{
+	expression1 = Term()
+	(
+	    <PLUS> expression2 = Term()
+	    { expression1 = new ASTAddition(expression1, expression2); }
+        |
+        <MINUS> expression2 = Term()
+        { expression1 = new ASTSubtraction(expression1, expression2); }
+	) *
+	{ return expression1; }
+}
+
+ASTNode Term():
+{
+    ASTNode expression1;
+    ASTNode expression2;
+}
+{
+	expression1 = Factor()
+    (
+        <TIMES> expression2 = Factor()
+        { expression1 = new ASTMultiplication(expression1, expression2); }
+        |
+        <DIV> expression2 = Factor()
+        { expression1 = new ASTDivision(expression1, expression2); }
+    ) *
+	{ return expression1; }
+}
+
+ASTNode Factor():
+{
+    Token token;
+    ASTNode expression;
+}
+{
+    token = <NUM>
+    { return new ASTInteger(Integer.parseInt(token.image)); }
+    |
+    token = <ID>
+    { return new ASTIdentifier(token.image); }
+    |
+    token = <TRUE>
+    { return new ASTBoolean(Boolean.parseBoolean(token.image)); }
+    |
+    token = <FALSE>
+    { return new ASTBoolean(Boolean.parseBoolean(token.image)); }
+    |
+    <MINUS> expression = Factor()
+    { return new ASTReverse(expression); }
+    |
+    <NOT> expression = Factor()
+    { return new ASTNegation(expression); }
+    |
+    <DECL> expression = Declaration()
+    { return expression; }
+    |
+    <LPAR> expression = SequenceExpression() <RPAR>
+    { return expression; }
+    |
+    <NEW> expression = Factor()
+    { return new ASTReference(expression); }
+    |
+    <DEREF> expression = Factor()
+    { return new ASTDereference(expression); }
+    |
+    <IF> expression = Condition()
+    { return expression; }
+    |
+    <WHILE> expression = Loop()
+    { return expression; }
+}
+
+IType TypeExpression():
+{
+    IType type;
+    IType referenceType;
+}
+{
+    (
+        <INT>
+        { type = IntegerType.getType(); }
+        |
+        <BOOL>
+        { type = BooleanType.getType(); }
+        |
+        <REF> referenceType = TypeExpression()
+        { type = new MemoryType(referenceType); }
+    )
+    { return type; }
+}
+
+ASTNode Declaration():
+{
+    Token parameter;
+    IType type;
+    ASTNode value;
+
+    List<Triplet<String, IType, ASTNode>> definitions = new ArrayList<Triplet<String, IType, ASTNode>>();
+    ASTNode bodyExpression;
+}
+{
+    (
+        parameter = <ID> <COL> type = TypeExpression() <DEF> value = SequenceExpression()
+        { definitions.add(new Triplet<String, IType, ASTNode>(parameter.image, type, value)); }
+    ) +
+    <IN> bodyExpression = SequenceExpression() <END>
+    { return new ASTDeclaration(definitions, bodyExpression); }
+}
+
+ASTNode Condition():
+{
+    ASTNode conditionExpression;
+    ASTNode mainExpression;
+    ASTNode secondaryExpression;
+}
+{
+    conditionExpression = SequenceExpression()
+    <THEN> mainExpression = SequenceExpression()
+    <ELSE> secondaryExpression = SequenceExpression() <END>
+    { return new ASTCondition(conditionExpression, mainExpression, secondaryExpression); }
+}
+
+ASTNode Loop():
+{
+    ASTNode conditionExpression;
+    ASTNode bodyExpression;
+}
+{
+    conditionExpression = SequenceExpression()
+    <DO> bodyExpression = SequenceExpression() <END>
+    { return new ASTWhile(conditionExpression, bodyExpression); }
+}
