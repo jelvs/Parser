@@ -1,9 +1,9 @@
 
-#ICL-Project
+# ICL-Project
 
-##Implement a complete interpreter for the basic imperative-functional language specified
+## Implement a complete interpreter for the basic imperative-functional language specified
 
-##Abstract Syntax
+## Abstract Syntax
 
     EE -> EE ; EE | EE := EE
     
@@ -23,7 +23,7 @@
     
     | unop EE
 
-##Concrete Syntax
+## Concrete Syntax
 
     EM -> E(<;>EM)*
     
@@ -51,7 +51,7 @@
     
     | while EM do EM end
 
-##Basic operations
+## Basic operations
 
 **Arithmetic operations (on integer values)** 
 
@@ -65,7 +65,7 @@
  
     E && E, E || E, ~E
     
-##Examples
+## Examples
 
     (new 3) := 6;;
     
